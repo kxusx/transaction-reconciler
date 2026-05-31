@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Incremental Reconciler</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Incremental Reconciler</h1>
+      <p>Upload the transaction ledger and bank statement, then verify balances one date at a time.</p>
+    </div>
+    <div class="status-pill" id="runStatus">Idle</div>
+  </header>
+
+  <main>
+    <section class="upload-grid" aria-label="CSV uploads">
+      <label class="upload-box">
+        <span>Transactions CSV</span>
+        <input id="transactionsFile" type="file" accept=".csv,text/csv">
+      </label>
+      <label class="upload-box">
+        <span>Bank Balances CSV</span>
+        <input id="balancesFile" type="file" accept=".csv,text/csv">
+      </label>
+      <label class="money-field">
+        <span>Opening Balance</span>
+        <input id="openingBalance" type="text" inputmode="decimal" value="0.00">
+      </label>
+    </section>
+
+    <section class="controls" aria-label="Run controls">
+      <button id="loadButton" type="button">Load Files</button>
+      <button id="stepButton" type="button" disabled>Verify Next Date</button>
+      <button id="runButton" type="button" disabled>Run</button>
+      <button id="pauseButton" type="button" disabled>Pause</button>
+      <button id="resetButton" type="button" disabled>Reset Checkpoint</button>
+    </section>
+
+    <section class="metrics" aria-label="Current reconciliation state">
+      <div class="metric">
+        <span>Verified Through</span>
+        <strong id="verifiedThrough">None</strong>
+      </div>
+      <div class="metric">
+        <span>Transaction Total Through Date</span>
+        <strong id="totalThroughDate">0.00</strong>
+      </div>
+      <div class="metric">
+        <span>Current Date Total</span>
+        <strong id="currentDateTotal">0.00</strong>
+      </div>
+      <div class="metric">
+        <span>Stated Balance</span>
+        <strong id="statedBalance">-</strong>
+      </div>
+      <div class="metric">
+        <span>Expected Balance</span>
+        <strong id="expectedBalance">0.00</strong>
+      </div>
+      <div class="metric">
+        <span>Difference</span>
+        <strong id="difference">-</strong>
+      </div>
+    </section>
+
+    <section class="table-section" aria-label="Verification results">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Txn Count</th>
+            <th>Date Total</th>
+            <th>Total Through Date</th>
+            <th>Expected</th>
+            <th>Stated</th>
+            <th>Difference</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
