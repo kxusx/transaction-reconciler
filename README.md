@@ -1,102 +1,65 @@
 # Transaction Reconciler
 
-Small Python solution for reconciling a transaction ledger against daily bank statement balances.
+This project reconciles a transaction ledger against daily bank balances.
 
-The expected balance for each day is:
+The main idea is:
 
 ```text
-opening balance + cumulative transactions dated on or before that day
+expected balance for a date = opening balance + all transactions up to that date
 ```
 
-The tool produces:
+For each calendar date, the code compares that expected balance to the bank's stated balance. A date is marked:
 
-- a terminal summary
-- a CSV report with expected vs actual balances
-- an HTML report that accountants can scan for mismatches and missing statement dates
+- `matched` when the balances are exactly equal
+- `mismatch` when the bank balance exists but does not match
+- `missing_statement` when there is no bank balance for that date
 
-## Requirements
+## Why Date By Date
 
-- Python 3.10+
-- No third-party dependencies
+The reconciler processes one date at a time instead of only producing one final answer. After each matched date, progress can be checkpointed:
 
-## Run the sample
-
-```bash
-python3 -m transaction_reconciler.cli \
-  --transactions examples/transactions.csv \
-  --balances examples/balances.csv
+```text
+verified_through = last date known to be correct
+expected_balance = balance at that verified date
+reconciled_dates = map of verified date -> reconciliation row
 ```
 
-Reports are written to:
+If processing stops halfway through, the next run can resume after `verified_through`. If a mismatch is found, processing stops because later balances depend on the unresolved date.
 
-- `reports/reconciliation_report.csv`
-- `reports/reconciliation_report.html`
+## Browser Demo
 
-The CLI exits with status `0` when everything reconciles and `1` when mismatches or missing statement days need review.
+Open:
 
-## Run the two-year demo data
-
-The repo also includes larger sample files covering `2024-01-01` through `2025-12-31`:
-
-- `examples/two_year_transactions.csv`
-- `examples/two_year_balances.csv`
-
-Each day has either 3 or 4 transactions, for 2,558 total transactions across 731 statement days.
-
-```bash
-python3 -m transaction_reconciler.cli \
-  --transactions examples/two_year_transactions.csv \
-  --balances examples/two_year_balances.csv \
-  --out-csv reports/two_year_reconciliation_report.csv \
-  --out-html reports/two_year_reconciliation_report.html
+```text
+web/index.html
 ```
 
-For the restartable path:
+Upload:
 
-```bash
-python3 -m transaction_reconciler.cli \
-  --transactions examples/two_year_transactions.csv \
-  --balances examples/two_year_balances.csv \
-  --checkpoint reports/two_year_checkpoint.json \
-  --out-csv reports/two_year_incremental_report.csv \
-  --out-html reports/two_year_incremental_report.html
+```text
+examples/transactions.csv
+examples/balances.csv
 ```
 
-## Restartable date-by-date run
+Or use the larger demo files:
 
-For a production-style job that can resume after a worker failure, pass a checkpoint path:
-
-```bash
-python3 -m transaction_reconciler.cli \
-  --transactions examples/transactions.csv \
-  --balances examples/balances.csv \
-  --checkpoint reports/checkpoint.json \
-  --out-csv reports/incremental_reconciliation_report.csv \
-  --out-html reports/incremental_reconciliation_report.html
+```text
+examples/two_year_transactions.csv
+examples/two_year_balances.csv
 ```
 
-This mode processes dates in order and writes `reports/checkpoint.json` after each matched date. The checkpoint includes a `reconciled_dates` map and `verified_through`, so a later run skips dates that are already known-good. Processing stops at the first mismatch or missing statement date because later cumulative balances are not trustworthy until that break is reviewed.
+The browser app verifies each date and shows:
 
-## Browser upload UI
+- transaction total for the current date
+- transaction total through that date
+- expected balance
+- stated bank balance
+- difference
+- status
 
-Open `web/index.html` in a browser, upload both CSV files, and click `Run` or `Verify Next Date`.
+The browser stores progress in `localStorage`, so refreshing the page can resume from the last matched date.
 
-The browser UI:
-
-- parses money as integer cents
-- verifies one date at a time
-- shows the transaction total through that date, the current date total, expected balance, stated bank balance, and difference
-- stores progress in `localStorage` after each matched date
-- resumes from the last verified date if the page is refreshed or the browser is closed
-- stops at the first mismatch or missing statement date
-
-## Run tests
-
-```bash
-python3 -m unittest discover
-```
-
-## Input format
+## Input Format
 
 Transactions CSV:
 
@@ -114,18 +77,4 @@ date,balance
 2025-06-02,950.00
 ```
 
-Dates must be ISO formatted as `YYYY-MM-DD`. Amounts are parsed with Python `Decimal` and rounded to cents.
-
-## Edge cases handled
-
-- Multiple transactions on the same day
-- Days with a bank balance but no transactions
-- Transaction dates missing from the bank statement
-- Duplicate bank statement dates
-- Invalid dates or money values with line-numbered errors
-- Optional opening balance with `--opening-balance`
-- Restartable checkpointing for date-by-date processing
-
-## Notes
-
-I kept the reconciliation logic separate from report rendering so it can be tested directly and reused by a web app or batch job. The original batch reconciliation remains available, while the checkpointed path is better suited to long-running jobs where partial progress must survive process failures.
+Dates use `YYYY-MM-DD`. Money is handled as cents in the browser and as `Decimal` in Python to avoid floating point errors.
